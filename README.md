@@ -1,4 +1,4 @@
-# SQL 电商运营学习平台
+﻿﻿# SQL 电商运营学习平台
 
 一个专为电商运营人员设计的 SQL 入门学习平台，支持移动端和 PC 端。
 
@@ -122,4 +122,47 @@ CREATE TABLE categories (
   name TEXT,
   parent_id INTEGER
 );
+```
+
+
+
+## 生产环境部署
+
+### 本地构建 + 自托管
+
+```bash
+npm ci
+npm run build
+npm run start
+```
+
+### 环境变量
+
+- `PORT`：服务端口（默认 3000）
+- `HOSTNAME`：监听地址（例如 `0.0.0.0`）
+- `.env.production.local`：生产环境变量（如需）
+
+### 进程守护（示例：PM2）
+
+```bash
+npm install -g pm2
+pm2 start npm --name sql-learning -- start
+pm2 save
+```
+
+### 反向代理（可选）
+
+- 使用 Nginx/Apache 反代到 `http://127.0.0.1:3000`
+- 确保 `public/sql-wasm.wasm` 可被正确访问（sql.js 依赖）
+
+## Next.js 版本安全校验（截至 2026-03-12）
+
+- 当前依赖：`next@16.1.6`（见 `package.json`）
+- `npm audit` 显示 0 个漏洞
+
+校验命令：
+
+```bash
+npm ls next
+npm audit --omit=dev
 ```
