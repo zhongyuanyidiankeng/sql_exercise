@@ -1,7 +1,14 @@
 // app/api/execute-sql/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { runSQL } from '@/lib/db/sqlRunner';
+import { runSQL, type SqlResult } from '@/lib/db/sqlRunner';
 import { compareResults, normalizeSql } from '@/lib/utils';
+
+type ExecResultSet = { columns: string[]; values: (string | number | null)[][] };
+
+function toExecResults(result: SqlResult): ExecResultSet[] {
+  if (result.columns.length === 0 && result.rows.length === 0) return [];
+  return [{ columns: result.columns, values: result.rows }];
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +21,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 执行用户的 SQL
     const userResult = await runSQL(sql);
 
-    if (!userResult.success) {
+    if (userResult.error) {
       return NextResponse.json({
         success: false,
         error: userResult.error,
@@ -25,39 +31,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 如果没有提供答案 SQL，只返回执行结果
+    const userResults = toExecResults(userResult);
+
     if (!answerSql) {
       return NextResponse.json({
         success: true,
-        results: userResult.results,
+        results: userResults,
         isCorrect: null,
       });
     }
 
-    // 验证答案
     let isCorrect = false;
 
     if (validateMode === 'exact') {
-      // 精确匹配模式：比较 SQL 语句
       isCorrect = normalizeSql(sql) === normalizeSql(answerSql);
     } else {
-      // 结果匹配模式：比较查询结果
       const answerResult = await runSQL(answerSql);
 
-      if (answerResult.success && userResult.results && answerResult.results) {
-        // 比较结果集
-        if (userResult.results.length === answerResult.results.length) {
-          isCorrect = userResult.results.every((userRes, idx) => {
-            const answerRes = answerResult.results![idx];
-            return compareResults(userRes.values, answerRes.values);
-          });
-        }
+      if (!answerResult.error && userResult.rowCount === answerResult.rowCount) {
+        isCorrect = compareResults(userResult.rows, answerResult.rows);
       }
     }
 
     return NextResponse.json({
       success: true,
-      results: userResult.results,
+      results: userResults,
       isCorrect,
     });
   } catch (error: any) {

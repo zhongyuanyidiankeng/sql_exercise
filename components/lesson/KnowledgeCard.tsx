@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { runSQL } from '@/lib/db/sqlRunner';
+import { runSQL, type SqlResult } from '@/lib/db/sqlRunner';
 import Button from '@/components/ui/Button';
 
 interface KnowledgeCardProps {
@@ -20,7 +20,7 @@ interface KnowledgeCardProps {
 
 export default function KnowledgeCard({ knowledge }: KnowledgeCardProps) {
   const [showExample, setShowExample] = useState(false);
-  const [exampleResult, setExampleResult] = useState<any>(null);
+  const [exampleResult, setExampleResult] = useState<SqlResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const runExample = async () => {
@@ -86,12 +86,16 @@ export default function KnowledgeCard({ knowledge }: KnowledgeCardProps) {
           {/* 示例结果 */}
           {showExample && exampleResult && (
             <div className="mt-4 bg-ink/4 rounded-lg p-4 border border-ink/10">
-              {exampleResult.success && exampleResult.results && exampleResult.results.length > 0 ? (
+              {exampleResult.error ? (
+                <div className="text-red-400 text-sm font-mono">
+                  {exampleResult.error}
+                </div>
+              ) : exampleResult.columns.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-ink/10">
-                        {exampleResult.results[0].columns.map((col: string, idx: number) => (
+                        {exampleResult.columns.map((col: string, idx: number) => (
                           <th key={idx} className="px-3 py-2 text-left text-ink/50 font-semibold">
                             {col}
                           </th>
@@ -99,7 +103,7 @@ export default function KnowledgeCard({ knowledge }: KnowledgeCardProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {exampleResult.results[0].values.map((row: any[], rowIdx: number) => (
+                      {exampleResult.rows.map((row: (string | number | null)[], rowIdx: number) => (
                         <tr key={rowIdx} className="border-b border-ink/10">
                           {row.map((cell, cellIdx) => (
                             <td key={cellIdx} className="px-3 py-2 text-ink/70">

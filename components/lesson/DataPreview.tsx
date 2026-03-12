@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { runSQL } from '@/lib/db/sqlRunner';
+import { runSQL, type SqlResult } from '@/lib/db/sqlRunner';
 
 interface DataPreviewProps {
   tables: string[];
@@ -10,7 +10,7 @@ interface DataPreviewProps {
 
 export default function DataPreview({ tables }: DataPreviewProps) {
   const [selectedTable, setSelectedTable] = useState(tables[0]);
-  const [data, setData] = useState<{ columns: string[]; values: any[][] } | null>(null);
+  const [data, setData] = useState<SqlResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,8 +21,10 @@ export default function DataPreview({ tables }: DataPreviewProps) {
     setLoading(true);
     try {
       const result = await runSQL(`SELECT * FROM ${tableName} LIMIT 10`);
-      if (result.success && result.results && result.results.length > 0) {
-        setData(result.results[0]);
+      if (!result.error) {
+        setData(result);
+      } else {
+        setData(null);
       }
     } catch (error) {
       console.error('Failed to load table data:', error);
@@ -79,7 +81,7 @@ export default function DataPreview({ tables }: DataPreviewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/10">
-              {data.values.map((row, rowIdx) => (
+              {data.rows.map((row, rowIdx) => (
                 <tr key={rowIdx} className="hover:bg-panel/70 transition-colors">
                   {row.map((cell, cellIdx) => (
                     <td key={cellIdx} className="px-4 py-3 text-sm text-ink/70">
@@ -104,7 +106,7 @@ export default function DataPreview({ tables }: DataPreviewProps) {
       {/* 数据统计 */}
       {data && (
         <div className="px-4 py-3 bg-panel/70 border-t border-ink/10 text-xs text-ink/60">
-          显示 {data.values.length} 条记录 · {data.columns.length} 列
+          显示 {data.rows.length} 条记录 · {data.columns.length} 列
         </div>
       )}
     </div>
